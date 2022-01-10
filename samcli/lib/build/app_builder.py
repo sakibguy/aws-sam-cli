@@ -236,7 +236,7 @@ class ApplicationBuilder:
             container_env_vars = self._make_env_vars(layer, file_env_vars, inline_env_vars)
 
             layer_build_details = LayerBuildDefinition(
-                layer.name,
+                layer.full_path,
                 layer.codeuri,
                 layer.build_method,
                 layer.compatible_runtimes,
@@ -276,7 +276,7 @@ class ApplicationBuilder:
         original_dir = pathlib.Path(stack.location).parent.resolve()
 
         template_dict = stack.template_dict
-
+        normalized_resources = stack.resources
         for logical_id, resource in template_dict.get("Resources", {}).items():
             resource_iac_id = ResourceMetadataNormalizer.get_resource_id(resource, logical_id)
             full_path = get_full_path(stack.stack_path, resource_iac_id)
@@ -287,6 +287,11 @@ class ApplicationBuilder:
                 # this resource was not built or a nested stack.
                 # So skip it because there is no path/uri to update
                 continue
+
+            # clone normalized metadata from stack.resources only to built resources
+            normalized_metadata = normalized_resources.get(logical_id, {}).get("Metadata")
+            if normalized_metadata:
+                resource["Metadata"] = normalized_metadata
 
             resource_type = resource.get("Type")
             properties = resource.setdefault("Properties", {})
